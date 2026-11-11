@@ -1,0 +1,6 @@
+#ifndef FEDERATED1_CRYPTO_EXECUTION_TEST_H
+#define FEDERATED1_CRYPTO_EXECUTION_TEST_H
+
+int RunCryptoExecutionTests();
+
+#endif

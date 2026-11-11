@@ -1,0 +1,18 @@
+Candidate: resnet32-cifar100-sp-k64-rho020-p12-paux18-q62-candidate-v28
+Screening verdict: FAIL
+
+Local compression candidates
+- try c2=14; predicted model/aux RMSE becomes 2.8998445691e-04 / 1.6555745635e-04; estimated saving over T rounds is 4.8095703125e+01 MiB; B_ct shadow is unchanged by this parameter.
+- try c1=20; predicted model/aux RMSE becomes 1.9696928124e-04 / 1.6555745635e-04; estimated saving over T rounds is 1.8041992188e+01 MiB; B_ct shadow is unchanged by this parameter.
+- keep cd=13; one-bit reduction violates a range or profile condition.
+- try c2_aux=20; predicted model/aux RMSE becomes 1.8903231424e-04 / 2.3858858203e-04; estimated saving over T rounds is 1.5625000000e+00 MiB; B_ct shadow is unchanged by this parameter.
+- try c1_aux=24; predicted model/aux RMSE becomes 1.8903231424e-04 / 2.3943274661e-04; estimated saving over T rounds is 1.5625000000e+00 MiB; B_ct shadow is unchanged by this parameter.
+- keep cd_aux=20; one-bit reduction violates a range or profile condition.
+
+Outer ca sweep required by v15
+- ca and ca_aux are not local one-bit suggestions. Each candidate must recompute B_ct and the required sigma_smg, then rerun static validation and calibration.
+
+Measured smudging candidates (1.5x measured requirement)
+- model sigma_smg candidate: 1.3407957265e+14
+- auxiliary sigma_smg candidate: 2.6005422467e+12
+- every sigma change must be rerun through static precision and calibration; these are local sensitivity suggestions, not a replacement for the external security design.
