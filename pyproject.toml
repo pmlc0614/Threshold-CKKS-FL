@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plaintext-fl-python"
+version = "0.1.0"
+description = "FullSD and SparseSD v17 federated learning with plaintext baselines"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26,<3",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+]
+
+[project.scripts]
+encrypted-full = "plaintext_fl.encrypted_full:main"
+encrypted-sparse-one-round = "plaintext_fl.encrypted_sparse:main_one_round"
+encrypted-sparse = "plaintext_fl.encrypted_sparse:main"
+federated-full = "plaintext_fl.federated_full:main"
+
+[tool.setuptools.packages.find]
+include = ["plaintext_fl*"]
+
+[tool.setuptools.package-data]
+plaintext_fl = ["profiles/*.json"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true

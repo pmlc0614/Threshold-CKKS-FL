@@ -1,0 +1,67 @@
+{
+  "schema": "fl-v17-contract-golden-v1",
+  "weights": [
+    {
+      "client_ids": [30, 10, 20],
+      "example_counts": [1, 1, 1],
+      "denominator": 128,
+      "expected_alphas": [42, 43, 43]
+    },
+    {
+      "client_ids": [10, 20],
+      "example_counts": [1, 3],
+      "denominator": 4,
+      "expected_alphas": [1, 3]
+    }
+  ],
+  "layouts": {
+    "parameter": {
+      "model_name": "resnet20-cifar10",
+      "entries": [
+        {
+          "name": "conv1.weight",
+          "shape": [16, 3, 3, 3],
+          "offset": 0,
+          "numel": 432,
+          "dtype": "float32"
+        }
+      ],
+      "expected_sha256": "78500415f35edcad4ab057a2d2ecb5614f74eab963e536845b695110602ecaf6"
+    },
+    "running_mean": {
+      "model_name": "resnet20-cifar10",
+      "entries": [
+        {
+          "name": "bn1.running_mean",
+          "shape": [16],
+          "offset": 0,
+          "numel": 16,
+          "dtype": "float32"
+        }
+      ],
+      "expected_sha256": "d8204987221095582c7b13ada6e4b9b5fcad7dc2e47555d6ef81918a76ac86a4"
+    },
+    "running_variance": {
+      "model_name": "resnet20-cifar10",
+      "entries": [
+        {
+          "name": "bn1.running_var",
+          "shape": [16],
+          "offset": 0,
+          "numel": 16,
+          "dtype": "float32"
+        }
+      ],
+      "expected_sha256": "c27aad243b2c8f93c795fb193743167e4ad75e153b7d54d69e8bdb672e51de87"
+    }
+  },
+  "binary_header": {
+    "message_type": "client_selection",
+    "setup_id_hex": "000102030405060708090a0b0c0d0e0f",
+    "round_id": 42,
+    "client_id": 7,
+    "payload_hex": "0102030405",
+    "expected_size": 184,
+    "expected_hex": "464c56313742494e0100000002000000000102030405060708090a0b0c0d0e0f2a00000000000000070000000000000078500415f35edcad4ab057a2d2ecb5614f74eab963e536845b695110602ecaf6d8204987221095582c7b13ada6e4b9b5fcad7dc2e47555d6ef81918a76ac86a4c27aad243b2c8f93c795fb193743167e4ad75e153b7d54d69e8bdb672e51de87050000000000000074f81fe167d99b4cb41d6d0ccda82278caee9f3e2f25d5e5a3936ff3dcec60d0"
+  }
+}
