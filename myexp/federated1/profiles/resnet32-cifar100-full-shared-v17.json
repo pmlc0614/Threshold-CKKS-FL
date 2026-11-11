@@ -1,0 +1,75 @@
+{
+  "name": "resnet32-cifar100-full-shared-v17",
+  "protocol_version": "v17",
+  "experiment": {
+    "mode": "FULL",
+    "clients": 8,
+    "collusion_bound": 1,
+    "rounds": 200,
+    "model_dimension": 472756,
+    "aux_dimension": 2464,
+    "selection_ratio": 1.0,
+    "minimum_cohort": 3,
+    "weight_denominator": 128,
+    "integer_weights": [
+      13,
+      15,
+      17,
+      16,
+      14,
+      19,
+      18,
+      16
+    ],
+    "error_feedback": true
+  },
+  "ring": {
+    "ring_dimension": 8192,
+    "mlwe_rank": 1,
+    "q_tower_bits": [
+      48,
+      48
+    ],
+    "p_tower_bits": [
+      60
+    ],
+    "hybrid_large_digits": 2,
+    "maximum_qp_bits": 218
+  },
+  "precision": {
+    "p": 12,
+    "p_aux": 18,
+    "u_max": 1.472850219,
+    "u_max_aux": 73.02073288
+  },
+  "scaling": {
+    "model_factor": "77371252455336267181195264",
+    "aux_factor": "1208925819614629174706176"
+  },
+  "compression": {
+    "c1": 20,
+    "ca": 57,
+    "c2": 16,
+    "cd": 13,
+    "c1_aux": 27,
+    "ca_aux": 61,
+    "c2_aux": 23,
+    "cd_aux": 19
+  },
+  "smudging": {
+    "sigma": 302231454903657293676544,
+    "sigma_aux": 4722366482869645213696
+  },
+  "delivery": {
+    "model_scale": 2774,
+    "aux_scale": 3589
+  },
+  "measurement": {
+    "calibration_rounds": 10,
+    "calibration_trials": 3,
+    "lambda_stat": 30,
+    "kappa_pre": 10,
+    "retry_margin": 1.2,
+    "estimate_agreement_factor": 10
+  }
+}

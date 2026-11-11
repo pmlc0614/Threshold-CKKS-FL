@@ -1,0 +1,49 @@
+{
+  "document_version": "v17",
+  "runtime_protocol_version": "v17",
+  "binding_abi": 19,
+  "scope": "Fixed-cohort Core; reference STATIC-PASS does not certify native sampler/codec or dropout/retry extension.",
+  "q_primes": [
+    281474976694273,
+    140737488486401
+  ],
+  "p_primes": [
+    1152921504606830593
+  ],
+  "integer_weights": [
+    13,
+    15,
+    17,
+    16,
+    14,
+    19,
+    18,
+    16
+  ],
+  "rounds": 200,
+  "collusion_bound": 1,
+  "candidate_ids": {
+    "Full": "614a2d1fa8e1d8d21ac0",
+    "Sparse": "491e4b96597d72ad36d1"
+  },
+  "openfhe": {
+    "version": "1.4.0",
+    "FirstModSize": 48,
+    "ScalingModSize": 47,
+    "RingDim": 8192,
+    "BatchSize": 4096,
+    "MultiplicativeDepth": 1,
+    "ScalingTechnique": "FIXEDMANUAL",
+    "KeySwitchTechnique": "BV",
+    "SecurityLevel": "HEStd_NotSet",
+    "P": "LastPrime<NativeInteger>(60,16384)"
+  },
+  "reference_validation_sha256": "01b1b16837f24ece956ef421ac1d51b936f0550511d6bb407b8bdd452d7035a3",
+  "reference_policy": "SEARCH-DEFAULT-v10",
+  "setup_noise_sigmas": [
+    3.2,
+    3.2,
+    3.2,
+    3.2
+  ]
+}

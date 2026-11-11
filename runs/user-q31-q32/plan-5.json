@@ -1,0 +1,34 @@
+{
+  "data_mode": "nonIID",
+  "profile": "SP",
+  "workload": {
+    "description": "cifar100/resnet32: 1 local SGD steps; frozen actual client updates, independent crypto replays",
+    "dataset_sha256": "368fa2b3118566fe48db86b9445e23d486c89d934408d1421f0f600fd4f1ea65",
+    "partition_sha256": "f2e474e5142b656ebbf5850025c4000b5f310c7f73056e9c8133ae4ce19750b9",
+    "runner_sha256": "55488e455399865836dfce84edb9c6c7b478718b97c34dba7abe94ee28af9a73",
+    "updates_sha256": "4ca66d155412bc68d01bd4c676601f75e32cf064746a3af27f1f5028a5475924",
+    "manifest_path": "/home/eslee3209/federated-workspace/plaintext-FL-python/runs/v27-noniid/updates.manifest.json"
+  },
+  "stage_trials": {
+    "E2": 5,
+    "E3": 5,
+    "E4": 5,
+    "E5": 5
+  },
+  "batch_trials": 5,
+  "seed_rule": "fresh private native PRNG coins per trial; fresh setup per five-trial batch",
+  "openfhe_commit": "5bbbe96610c8fb82d97ef0b6d1e5b502684a1d86",
+  "build_options": "static-validated binary SHA256=8e2ab4e39186d387bc198de81435989a5b5c99fe1163d6f3c34688e21cba904e; compiler=9.4.0",
+  "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+  "tolerances": {
+    "E1": {
+      "exact_invariants": 0
+    },
+    "E3": {
+      "exact_invariants": 0
+    },
+    "E4": {
+      "exact_invariants": 0
+    }
+  }
+}
