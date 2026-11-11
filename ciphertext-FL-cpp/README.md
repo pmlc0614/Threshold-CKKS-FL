@@ -1,197 +1,125 @@
-# FullSD / SparseSD v17 native engine
+# Threshold-CKKS Aggregation in C++
 
-Protocol/wire version: **v17**. Python binding ABI: **22**.
-Use the matching Python repository for profiles and training commands:
-[installation and current usage](https://github.com/pmlc0614/plaintext-FL-python/blob/codex/README.md).
-Update both repositories, reinstall the Python package and rebuild the binding.
-The C++ namespace is `federated`; old v12 profiles and modules are unsupported.
+This directory contains the OpenFHE-based C++ backend for *Communication-Efficient Threshold-CKKS Aggregation for Secure Cross-Silo Federated Learning*. The [Python training code](../plaintext-FL-python/) handles datasets, local training, and evaluation. It calls the C++ backend to encrypt client updates, aggregate them on the server, and collectively decrypt the aggregate.
 
-`myexp/federated1` contains the native engine. `ciphertext_fl_cpp` is the training
-binding target; `federated1` is an explicit functional-test target excluded from
-the default build. Collective-key baseline helpers are linked only into tests.
-Historical candidate screening, empirical acceptance tools and old profiles
-have been removed. Current tests retain only functional/reference diagnostics;
-no runtime STATIC-PASS or empirical parameter certificate is produced.
+| Goal | CMake target | Build output |
+| --- | --- | --- |
+| Run encrypted training from Python | `ciphertext_fl_cpp` | Python module in `build/python/` |
+| Run the C++ functional tests | `federated1` | Executable at `build/myexp/federated1` |
 
-Sparse M2R parallelizes groups and components in one bounded server executor.
-Each component retains its own stochastic ModDown. Client batches remain
-isolated. Diagnostic QP accumulation is disabled in ordinary training.
+If you have already built the backend using the [Python installation instructions](../plaintext-FL-python/README.md#installation), the same build can be used here. From `ciphertext-FL-cpp/`, continue to [Verify the Python binding](#verify-the-python-binding) or [Tests](#tests).
 
-Only v17 numeric records are retained under `myexp/federated1/profiles/`.
-The user-facing training profiles are in the Python repository, including
-CIFAR-10/ResNet20 and CIFAR-100/ResNet32 Full/Sparse configurations.
+## Implementation
 
-Dropout support is the post-upload/pre-request experimental subset, with attempt
-cap one. v17 permits broader bounded pre-request retries; this implementation
-does not implement them. ACKs and client/server roles are simulated in-process.
+The Full and Sparse profiles use the same Python binding. The training command and its parameter profile select the aggregation path.
+
+| Component | Role | Source |
+| --- | --- | --- |
+| Full aggregation | Aggregates dense model updates in packed ring learning with errors (RLWE) ciphertexts. | [`protocol-full-model-path.cpp`](myexp/federated1/protocol-full-model-path.cpp) |
+| Sparse aggregation | Aligns chunks selected by different clients and aggregates contributions at matching model positions. | [`protocol-sparse-path.cpp`](myexp/federated1/protocol-sparse-path.cpp) |
+| Ring and module conversion | Converts packed RLWE ciphertexts into module learning with errors (MLWE) ciphertexts for chunk-wise aggregation, then repacks the aggregated chunks into RLWE ciphertexts. | [`protocol-ring-conversion.cpp`](myexp/federated1/protocol-ring-conversion.cpp) |
+| Collective decryption | Combines clients' partial-decryption responses to recover the aggregate. | [`protocol-v17-decryption.cpp`](myexp/federated1/protocol-v17-decryption.cpp) |
+| Python binding | Exposes the native engine and its version information to the Python training code. | [`python-bindings.cpp`](myexp/federated1/python-bindings.cpp) |
+
+See the [top-level README](../README.md) for the protocol diagram and experimental results.
+
+## Installation
+
+The commands below use Bash. They assume that `ciphertext-FL-cpp/` and `plaintext-FL-python/` are sibling directories under `Threshold-CKKS-FL/`.
+
+Build requirements:
+
+- Python 3.10 or later in an activated environment, with Python development headers
+- CMake 3.16.3 or later
+- A C++17 compiler with OpenMP support
+- Boost headers
+
+### Build the Python binding
+
+From the root of `Threshold-CKKS-FL`, run:
+
+```bash
+cd ciphertext-FL-cpp
+python -m pip install 'pybind11==2.13.6'
+
+cmake -S . -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_FEDERATED_PYTHON_BINDINGS=ON \
+  -DBUILD_UNITTESTS=OFF \
+  -DBUILD_EXAMPLES=OFF \
+  -DBUILD_BENCHMARKS=OFF \
+  -DPython3_EXECUTABLE="$(command -v python)" \
+  -Dpybind11_DIR="$(python -m pybind11 --cmakedir)"
+
+cmake --build build --target ciphertext_fl_cpp -j 4
+```
+
+The `-j 4` option sets the number of parallel compilation jobs. For encrypted training, use the Python option `--crypto-threads` to configure parallelism in the native engine.
+
+### Verify the Python binding
+
+From `ciphertext-FL-cpp/`, add the build output to `PYTHONPATH` and import the module:
+
+```bash
+export PYTHONPATH="$(realpath build/python)${PYTHONPATH:+:$PYTHONPATH}"
+
+python -c 'import ciphertext_fl_cpp as m; print(m.__file__); print(m.PROTOCOL_VERSION, m.BINDING_ABI_VERSION)'
+```
+
+The first line should show the path to the compiled module under `ciphertext-FL-cpp/build/python/`. The second line should show:
+
+```text
+v17 22
+```
+
+`v17` is the protocol version, and `22` is the native binding ABI version expected by the Python training code. When opening a new shell, activate the same Python environment and set `PYTHONPATH` again.
+
+## Running encrypted training
+
+Start training from [`plaintext-FL-python/`](../plaintext-FL-python/) after installing the Python package and verifying the native binding. The [CIFAR-10 example](../plaintext-FL-python/README.md#cifar-10-example) provides the training commands.
+
+| Mode | Python command | Profile to select |
+| --- | --- | --- |
+| Full | `encrypted-full` | Full profile for the chosen dataset and model |
+| Sparse | `encrypted-sparse` | Sparse profile for the chosen dataset and model |
+
+For `--crypto-parameter-profile`, use a JSON file from [`plaintext-FL-python/plaintext_fl/profiles/`](../plaintext-FL-python/plaintext_fl/profiles/). The [supported profiles table](../plaintext-FL-python/README.md#supported-profiles) lists the dataset, model, chunk size, and transmission ratio for each file. The C++ directory [`myexp/federated1/profiles/`](myexp/federated1/profiles/) contains the native parameter records.
 
 ## Tests
+
+From `ciphertext-FL-cpp/`, build the native test executable and run all functional suites:
 
 ```bash
 cmake --build build --target federated1 -j 4
 ./build/myexp/federated1 all
 ```
 
-The suites cover codecs, independent key domains, source-wise key switching,
-late DD, Full/Sparse decryption, bitmap admission, dropout and timing isolation.
-Upstream OpenFHE source, licensing and documentation follow below.
+To list the available suites:
 
----
-
-OpenFHE - Open-Source Fully Homomorphic Encryption Library
-=====================================
-
-Fully Homomorphic Encryption (FHE) is a powerful cryptographic primitive that enables performing computations over encrypted data without having access to the secret key.
-OpenFHE is an open-source FHE library that includes efficient implementations of all common FHE schemes:
-  * Brakerski/Fan-Vercauteren (BFV) scheme for integer arithmetic
-  * Brakerski-Gentry-Vaikuntanathan (BGV) scheme for integer arithmetic
-  * Cheon-Kim-Kim-Song (CKKS) scheme for real-number arithmetic (includes approximate bootstrapping)
-  * Ducas-Micciancio (DM/FHEW), Chillotti-Gama-Georgieva-Izabachene (CGGI/TFHE), and Lee-Micciancio-Kim-Choi-Deryabin-Eom-Yoo (LMKCDEY) schemes for evaluating Boolean circuits and arbitrary functions over larger plaintext spaces using lookup tables
-
-OpenFHE also supports hybrid vectorized schemes, with the goal of enabling the FHEW/TFHE-like functional bootstrapping capability for schemes such as CKKS and BFV. In particular, OpenFHE supports
-  * Switching between CKKS and FHEW/TFHE to evaluate non-smooth functions, e.g., comparison, using (scalar) FHEW/TFHE functional bootstrapping
-  * Switching between RLWE (a scheme equivalent to the coefficient-encoded additive BFV scheme) and CKKS to evaluate arbitrary lookup tables over vectors of integers, e.g., modular reduction, comparison or S-box, using vectorized functional bootstrapping implemented in CKKS
-
-OpenFHE also includes the following multiparty extensions of FHE:
-  * Threshold FHE for BGV, BFV, and CKKS schemes
-  * Interactive bootstrapping for Threshold CKKS
-  * Proxy Re-Encryption for BGV, BFV, and CKKS schemes
-
-OpenFHE supports any GNU C++ compiler version 9 or above and clang C++ compiler version 10 or above. To achieve the best runtime performance, we recommend following the
-guidelines outlined in [building OpenFHE for best performance](https://github.com/openfheorg/openfhe-development/blob/main/docs/static_docs/Best_Performance.md).
-
-## Links and Resources
-
- * [OpenFHE documentation](https://openfhe-development.readthedocs.io/en/latest/)
- * [Design paper for OpenFHE](https://eprint.iacr.org/2022/915)
- * [OpenFHE website](https://openfhe.org)
- * [Community forum for OpenFHE](https://openfhe.discourse.group/)
- * [OpenFHE Release Notes](https://github.com/openfheorg/openfhe-development/blob/main/docs/static_docs/Release_Notes.md)
- * [Quickstart](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/intro/quickstart.html)
- * [BSD 2-Clause License](LICENSE)
- * [Contributing to OpenFHE](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/contributing/contributing.html)
- * [OpenFHE Governance](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/misc/governance.html)
- * [Openfhe-development Github Issues](https://github.com/openfheorg/openfhe-development/issues)
- * To report security vulnerabilities, please email us at contact@openfhe.org
-
-
-## Installation
-
-Refer to our General Installation Information: [readthedocs](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/intro/installation/installation.html) for more information
-
-Or refer to the following for your specific operating system:
-
-- [Linux](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/intro/installation/linux.html)
-
-- [MacOS](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/intro/installation/macos.html)
-
-- [Windows](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/intro/installation/windows.html)
-
-
-## Code Examples
-
-To get familiar with the main API of OpenFHE, we recommend looking at the code of the following examples:
-   1. FHE for arithmetic over integers (BFV):
-       1. [Simple Code Example](src/pke/examples/simple-integers.cpp)
-       2. [Simple Code Example with Serialization](src/pke/examples/simple-integers-serial.cpp)
-   1. FHE for arithmetic over integers (BGV):
-       1. [Simple Code Example](src/pke/examples/simple-integers-bgvrns.cpp)
-       2. [Simple Code Example with Serialization](src/pke/examples/simple-integers-serial-bgvrns.cpp)
-   1. FHE for arithmetic over real numbers (CKKS):
-       1. [Simple Code Example](src/pke/examples/simple-real-numbers.cpp)
-       2. [Advanced Code Example](src/pke/examples/advanced-real-numbers.cpp)
-       2. [Advanced Code Example for High-Precision CKKS](src/pke/examples/advanced-real-numbers-128.cpp)
-       2. [Arbitrary Smooth Function Evaluation](src/pke/examples/function-evaluation.cpp)
-       3. [Simple CKKS Bootstrapping Example](src/pke/examples/simple-ckks-bootstrapping.cpp)
-       4. [Advanced CKKS Bootstrapping Example](src/pke/examples/advanced-ckks-bootstrapping.cpp)
-       5. [Double-Precision (Iterative) Bootstrapping Example](src/pke/examples/iterative-ckks-bootstrapping.cpp)
-       6. [Basic CKKS Arithmetic in the CKKS Composite Scaling Mode](src/pke/examples/simple-real-numbers-composite-scaling.cpp)
-   1. FHE for arithmetic over complex numbers (CKKS):
-       1. [Leveled and Boostrapping Code Examples](src/pke/examples/simple-complex-numbers.cpp)
-   1. FHE for Boolean circuits and larger plaintext spaces (FHEW/TFHE):
-       1. [Simple Code Example with Symmetric Encryption](src/binfhe/examples/boolean.cpp)
-       2. [Simple Code Example with PKE](src/binfhe/examples/pke/boolean-pke.cpp)
-       2. [Evaluation of Multi-Input Gates](src/binfhe/examples/boolean-multi-input.cpp)
-       2. [Code with JSON serialization](src/binfhe/examples/boolean-serial-json.cpp)
-       3. [Code with Binary Serialization](src/binfhe/examples/boolean-serial-binary.cpp)
-       4. [Large-Precision Comparison](src/binfhe/examples/eval-sign.cpp)
-       4. [Small-Precison Arbitrary Function Evaluation](src/binfhe/examples/eval-function.cpp)
-   1. Scheme Switching:
-       1. [Examples with Scheme Switching between CKKS and FHEW/TFHE](src/pke/examples/scheme-switching.cpp)
-   1. Functional Bootstrapping over integers (RLWE and CKKS):
-       1. [Examples with Functional Bootstrapping using CKKS for lookup table evaluation, sign extraction and multivalue bootstrapping](src/pke/examples/functional-bootstrapping-ckks.cpp)
-   1. Threshold FHE:
-       1. [Code Example for BGV, BFV, and CKKS](src/pke/examples/threshold-fhe.cpp)
-       1. [2-party Interactive Bootstrapping Examples](src/pke/examples/interactive-bootstrapping.cpp)
-       1. [Simple n-party Interactive Bootstrapping Example](src/pke/examples/tckks-interactive-mp-bootstrapping.cpp)
-       1. [n-party Interactive Bootstrapping after Chebyshev Approximation](src/pke/examples/tckks-interactive-mp-bootstrapping-Chebyshev.cpp)
-       1. [Code Example for BFV with 5 parties](src/pke/examples/threshold-fhe-5p.cpp)
-
-## Main API
-
-- [PKE CryptoContext API (BGV/BFV/CKKS)](https://openfhe-development.readthedocs.io/en/latest/api/classlbcrypto_1_1CryptoContextImpl.html)
-- [Description of CryptoContext Parameters for BGV, BFV, and CKKS](https://github.com/openfheorg/openfhe-development/blob/main/src/pke/examples#description-of-the-cryptocontext-parameters-and-their-restrictions)
-
-- [BinFHE Context API (FHEW/TFHE)](https://openfhe-development.readthedocs.io/en/latest/api/classlbcrypto_1_1BinFHEContext.html)
-
-## Code of Conduct
-
-In the interest of fostering an open and welcoming environment, we as contributors and maintainers pledge to making
-participation in our project and our community a harassment-free experience for everyone, regardless of age, body size,
-disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education,
-socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
-
-
-OpenFHE is a community-driven open source project developed by a diverse group of
-[contributors](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/misc/contributors.html). The OpenFHE leadership has made a strong commitment to creating an open,
-inclusive, and positive community. Please read our
-[Code of Conduct](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/misc/code_of_conduct.html?highlight=code%20of%20) for guidance on how to interact with others in a way that
-makes our community thrive.
-
-## Call for Contributions
-
-We welcome all contributions including but not limited to:
-
-- [reporting issues](https://github.com/openfheorg/openfhe-development/issues)
-- addressing [bugs](https://github.com/openfheorg/openfhe-development/issues) big or small. We label issues to help you filter them to your skill level.
-- documentation changes
-- talks and seminars using OpenFHE
-
-## How to Cite OpenFHE
-
-To cite OpenFHE in academic papers, please use the following BibTeX entry (updated version)
-
-```
-@misc{OpenFHE,
-      author = {Ahmad Al Badawi and Andreea Alexandru and Jack Bates and Flavio Bergamaschi and David Bruce Cousins and Saroja Erabelli and Nicholas Genise and Shai Halevi and Hamish Hunt and Andrey Kim and Yongwoo Lee and Zeyu Liu and Daniele Micciancio and Carlo Pascoe and Yuriy Polyakov and Ian Quah and Saraswathy R.V. and Kurt Rohloff and Jonathan Saylor and Dmitriy Suponitsky and Matthew Triplett and Vinod Vaikuntanathan and Vincent Zucca},
-      title = {{OpenFHE}: Open-Source Fully Homomorphic Encryption Library},
-      howpublished = {Cryptology ePrint Archive, Paper 2022/915},
-      year = {2022},
-      note = {\url{https://eprint.iacr.org/2022/915}},
-      url = {https://eprint.iacr.org/2022/915}
-}
-```
-or, alternatively (original WAHC@CCS'22 version),
-```
-@inproceedings{10.1145/3560827.3563379,
-      author = {Al Badawi, Ahmad and Bates, Jack and Bergamaschi, Flavio and Cousins, David Bruce and Erabelli, Saroja and Genise, Nicholas and Halevi, Shai and Hunt, Hamish and Kim, Andrey and Lee, Yongwoo and Liu, Zeyu and Micciancio, Daniele and Quah, Ian and Polyakov, Yuriy and R.V., Saraswathy and Rohloff, Kurt and Saylor, Jonathan and Suponitsky, Dmitriy and Triplett, Matthew and Vaikuntanathan, Vinod and Zucca, Vincent},
-      title = {OpenFHE: Open-Source Fully Homomorphic Encryption Library},
-      year = {2022},
-      publisher = {Association for Computing Machinery},
-      address = {New York, NY, USA},
-      url = {https://doi.org/10.1145/3560827.3563379},
-      doi = {10.1145/3560827.3563379},
-      booktitle = {Proceedings of the 10th Workshop on Encrypted Computing \& Applied Homomorphic Cryptography},
-      pages = {53-63},
-      numpages = {11},
-      location = {Los Angeles, CA, USA},
-      series = {WAHC'22}
-}
+```bash
+./build/myexp/federated1 --help
 ```
 
-## Acknowledgments ##
+To run individual suites for ring conversion or threshold CKKS:
 
-Distribution Statement "A" (Approved for Public Release, Distribution Unlimited). This work is supported in part by DARPA through HR0011-21-9-0003 and HR0011-20-9-0102. The views, opinions, and/or findings expressed are those of the author(s) and should not be interpreted as representing the official views or policies of the Department of Defense or the U.S. Government.
+```bash
+./build/myexp/federated1 ring
+./build/myexp/federated1 threshold
+```
 
-Gaussian support now includes exact 16/5 and large integer sigmas (including 2^79
-and 2^71); see [ABI 19 sampler notes](interop/LARGE_GAUSSIAN_ABI19.md).
+The full suite also covers coefficient encoding, protocol setup, Full and Sparse aggregation, and the native engine interface used by the Python training code.
+
+## Dropout support
+
+The optional dropout experiment excludes one client after all clients have uploaded their ciphertexts and before the first collective-decryption request. The server reuses the uploaded ciphertexts to aggregate over the surviving clients. The implementation simulates client and server roles in one process and uses one attempt per logical round.
+
+See the [Python README](../plaintext-FL-python/README.md) for the dropout options and training commands.
+
+## OpenFHE and acknowledgments
+
+This implementation builds on [OpenFHE](https://github.com/openfheorg/openfhe-development). We thank the OpenFHE developers and contributors for making the library available. The threshold-CKKS federated aggregation code for this project is in [`myexp/federated1/`](myexp/federated1/).
+
+- [OpenFHE documentation](https://openfhe-development.readthedocs.io/en/latest/)
+- [OpenFHE: Open-Source Fully Homomorphic Encryption Library](https://eprint.iacr.org/2022/915)
+- [OpenFHE project acknowledgments](https://github.com/openfheorg/openfhe-development#acknowledgments)
+- [OpenFHE BSD 2-Clause License](LICENSE)
