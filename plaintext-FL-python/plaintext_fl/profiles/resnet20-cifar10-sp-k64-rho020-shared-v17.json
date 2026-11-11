@@ -1,0 +1,66 @@
+{
+  "schema": "fl-v17-crypto-parameter-profile-v3",
+  "name": "resnet20-cifar10-sp-k64-rho020-shared-v17",
+  "protocol_version": "v17",
+  "model_name": "resnet20-cifar10",
+  "experiment": {
+    "mode": "SPARSE",
+    "clients": 8,
+    "minimum_cohort_size": 3,
+    "selection_ratio": 0.2,
+    "safety_factor": 1.0,
+    "quantization_enabled": true
+  },
+  "dimensions": {
+    "parameter_numel": 272474,
+    "running_mean_numel": 784,
+    "running_variance_numel": 784,
+    "auxiliary_numel": 1568,
+    "parameter_layout_sha256": "f84d49b0d411463939494d4646f03f72fd1a8174f7193469952bed2aef483d1b",
+    "running_mean_layout_sha256": "ac5043f25309e52246c8877b31d35ce9e84194693287b1b802374995140b7432",
+    "running_variance_layout_sha256": "f9680e6e83481731d095e4b3972283440736bbee46c5bf430f127e3cde0bd5ac"
+  },
+  "ring": {
+    "ring_dimension": 8192,
+    "mlwe_rank": 64,
+    "q_modulus_bits": [
+      48,
+      48
+    ],
+    "p_modulus_bits": [
+      60
+    ],
+    "hybrid_large_digits": 2,
+    "maximum_qp_bits": 218
+  },
+  "scaling": {
+    "model_factor": "77371252455336267181195264",
+    "aux_factor": "1208925819614629174706176"
+  },
+  "precision": {
+    "parameter_bits": 12,
+    "auxiliary_bits": 18
+  },
+  "aggregate_bounds": {
+    "parameter": 1.472850219,
+    "auxiliary": 73.02073288
+  },
+  "compression": {
+    "c1": 20,
+    "ca": 57,
+    "c2": 16,
+    "cd": 13,
+    "aux_c1": 27,
+    "aux_ca": 61,
+    "aux_c2": 23,
+    "aux_cd": 19
+  },
+  "smudging": {
+    "parameter_sigma": 302231454903657293676544,
+    "auxiliary_sigma": 4722366482869645213696
+  },
+  "delivery": {
+    "parameter_scale": 2774,
+    "auxiliary_scale": 3589
+  }
+}
